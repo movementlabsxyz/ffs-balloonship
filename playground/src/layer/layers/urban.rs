@@ -33,8 +33,8 @@ impl LayerValue for Urban {
 			Urban::Ruin => Color::rgb(0.6, 0.6, 0.6),
 		};
 
-		commands.spawn((SpriteBundle {
-			sprite: Sprite {
+		commands.spawn((
+			Sprite {
 				color,
 				custom_size: Some(Vec2::new(
 					screen_cell.cell_size as f32,
@@ -42,13 +42,13 @@ impl LayerValue for Urban {
 				)),
 				..default()
 			},
-			transform: Transform::from_xyz(
+			Transform::from_xyz(
 				screen_cell.x as f32 * screen_cell.cell_size as f32,
 				screen_cell.y as f32 * screen_cell.cell_size as f32,
 				0.0,
 			),
-			..default()
-		},));
+			..default(),
+		));
 	}
 }
 

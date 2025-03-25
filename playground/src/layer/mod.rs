@@ -10,22 +10,25 @@ pub struct WorldPosition {
 	pub y: u32,
 }
 
+/// A cell that gets filled in relative to the world.
 #[derive(Clone, Copy)]
 pub struct WorldCell {
 	pub position: WorldPosition,
 	pub cell_size: u32,
 }
 
+/// A value that can be rendered to a cell.
 pub trait LayerValue: Clone + Copy + Default + PartialEq {
 	fn render(&self, commands: &mut Commands, screen_cell: &WorldCell);
 	fn get_color(&self) -> Color;
 }
 
+/// A factory that creates values for a layer.
 pub trait LayerFactory<T: LayerValue, D> {
 	fn create_value(&self, pos: WorldPosition, deps: &D) -> T;
 }
 
-/// A position relative to the grid.
+/// A position relative to the grid, i.e., subdivisions of the world.
 #[derive(Clone, Copy)]
 pub struct GridPosition {
 	pub x: u32,
@@ -39,6 +42,7 @@ impl GridPosition {
 	}
 }
 
+/// You can always iterate over a grid by going up to the scale.
 impl Iterator for GridPosition {
 	type Item = GridPosition;
 
@@ -54,6 +58,15 @@ impl Iterator for GridPosition {
 		}
 
 		Some(*self)
+	}
+}
+
+impl From<GridPosition> for WorldPosition {
+	fn from(grid_position: GridPosition) -> Self {
+		WorldPosition {
+			x: grid_position.x * grid_position.scale,
+			y: grid_position.y * grid_position.scale,
+		}
 	}
 }
 
@@ -98,10 +111,12 @@ impl<T: LayerValue> Layer<T> {
 		self.set_grid(grid_position, value);
 	}
 
+	/// Get the scale of the layer.
 	pub fn scale(&self) -> u32 {
 		self.scale
 	}
 
+	/// Render the layer to the given [Commands].
 	pub fn render(&self, commands: &mut Commands) {
 		for (&(x, y), value) in &self.data {
 			value.render(commands, &WorldCell { x, y, cell_size: self.scale });
@@ -109,6 +124,7 @@ impl<T: LayerValue> Layer<T> {
 	}
 }
 
+/// An iterator over all grid positions in the layer.
 pub struct AllGridPositions {
 	pub grid_position: GridPosition,
 }
@@ -122,11 +138,9 @@ impl AllGridPositions {
 impl Iterator for AllGridPositions {
 	type Item = WorldPosition;
 
+	// Simply iterate over the grid positions and convert them to world positions.
 	fn next(&mut self) -> Option<Self::Item> {
-		self.grid_position.next().map(|grid_position| WorldPosition {
-			x: grid_position.x * self.scale,
-			y: grid_position.y * self.scale,
-		})
+		self.grid_position.next().map(|grid_position| grid_position.into())
 	}
 }
 

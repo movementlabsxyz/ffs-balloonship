@@ -1,4 +1,4 @@
-use super::{Layer, LayerFactory, LayerValue, ScreenCell, CELL_SIZE, GRID_SIZE};
+use crate::layer::{Layer, LayerFactory, LayerValue, WorldPosition};
 use crate::terrain::base::NoiseGenerator;
 use bevy::prelude::*;
 
@@ -20,8 +20,8 @@ impl LayerValue for WaterType {
 			return;
 		}
 
-		commands.spawn(SpriteBundle {
-			sprite: Sprite {
+		commands.spawn((
+			Sprite {
 				color,
 				custom_size: Some(Vec2::new(
 					screen_cell.cell_size as f32,
@@ -29,13 +29,13 @@ impl LayerValue for WaterType {
 				)),
 				..default()
 			},
-			transform: Transform::from_xyz(
+			Transform::from_xyz(
 				screen_cell.x as f32 * screen_cell.cell_size as f32,
 				screen_cell.y as f32 * screen_cell.cell_size as f32,
 				0.0,
 			),
-			..default()
-		});
+			..default(),
+		));
 	}
 
 	fn get_color(&self) -> Color {
@@ -88,15 +88,15 @@ impl WaterType {
 			(y as f32 * cell_size_f32) - ((GRID_SIZE as f32 * cell_size_f32) / 2.0) + offset;
 
 		// Spawn water sprite at grid cell scale
-		commands.spawn(SpriteBundle {
-			sprite: Sprite {
+		commands.spawn((
+			Sprite {
 				color: self.get_color(),
 				custom_size: Some(Vec2::new(cell_size_f32 - 2.0, cell_size_f32 - 2.0)),
 				..default()
 			},
-			transform: Transform::from_xyz(pos_x, pos_y, 0.0),
-			..default()
-		});
+			Transform::from_xyz(pos_x, pos_y, 0.0),
+			..default(),
+		));
 	}
 }
 

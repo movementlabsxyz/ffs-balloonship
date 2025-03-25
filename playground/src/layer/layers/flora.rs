@@ -32,8 +32,8 @@ impl LayerValue for Flora {
 			Flora::Seaweed => Color::rgb(0.1, 0.4, 0.2),
 		};
 
-		commands.spawn((SpriteBundle {
-			sprite: Sprite {
+		commands.spawn((
+			Sprite {
 				color,
 				custom_size: Some(Vec2::new(
 					screen_cell.cell_size as f32,
@@ -41,13 +41,13 @@ impl LayerValue for Flora {
 				)),
 				..default()
 			},
-			transform: Transform::from_xyz(
+			Transform::from_xyz(
 				screen_cell.x as f32 * screen_cell.cell_size as f32,
 				screen_cell.y as f32 * screen_cell.cell_size as f32,
 				0.0,
 			),
-			..default()
-		},));
+			..default(),
+		));
 	}
 }
 

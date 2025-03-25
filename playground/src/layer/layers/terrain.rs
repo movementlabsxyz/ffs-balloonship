@@ -17,19 +17,22 @@ impl LayerValue for TerrainFeature {
 	fn render(&self, commands: &mut Commands, screen_cell: &ScreenCell) {
 		let color = self.get_color();
 
-		commands.spawn(SpriteBundle {
-			sprite: Sprite {
+		commands.spawn((
+			Sprite {
 				color,
-				custom_size: Some(Vec2::new(screen_cell.cell_size, screen_cell.cell_size)),
+				custom_size: Some(Vec2::new(
+					screen_cell.cell_size as f32,
+					screen_cell.cell_size as f32,
+				)),
 				..default()
 			},
-			transform: Transform::from_xyz(
-				screen_cell.x as f32 * screen_cell.cell_size,
-				screen_cell.y as f32 * screen_cell.cell_size,
+			Transform::from_xyz(
+				screen_cell.x as f32 * screen_cell.cell_size as f32,
+				screen_cell.y as f32 * screen_cell.cell_size as f32,
 				0.0,
 			),
-			..default()
-		});
+			..default(),
+		));
 	}
 
 	fn get_color(&self) -> Color {

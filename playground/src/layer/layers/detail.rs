@@ -1,8 +1,8 @@
-use super::biome::Biome;
-use super::terrain::TerrainFeature;
-use super::water::WaterType;
-use super::{Layer, LayerFactory, LayerValue, ScreenCell, CELL_SIZE, GRID_SIZE};
-use crate::terrain::base::NoiseGenerator;
+use crate::layer::base::NoiseGenerator;
+use crate::layer::layers::biome::Biome;
+use crate::layer::layers::terrain::TerrainFeature;
+use crate::layer::layers::water::WaterType;
+use crate::layer::{Layer, LayerFactory, LayerValue, WorldCell, WorldPosition};
 use bevy::prelude::*;
 
 #[derive(Clone, Copy, Default, PartialEq)]
@@ -17,26 +17,29 @@ pub enum TerrainDetail {
 }
 
 impl LayerValue for TerrainDetail {
-	fn render(&self, commands: &mut Commands, screen_cell: &ScreenCell) {
+	fn render(&self, commands: &mut Commands, screen_cell: &WorldCell) {
 		let color = self.get_color();
 
 		if *self == TerrainDetail::None {
 			return;
 		}
 
-		commands.spawn(SpriteBundle {
-			sprite: Sprite {
+		commands.spawn((
+			Sprite {
 				color,
-				custom_size: Some(Vec2::new(screen_cell.cell_size, screen_cell.cell_size)),
+				custom_size: Some(Vec2::new(
+					screen_cell.cell_size as f32,
+					screen_cell.cell_size as f32,
+				)),
 				..default()
 			},
-			transform: Transform::from_xyz(
-				screen_cell.x as f32 * screen_cell.cell_size,
-				screen_cell.y as f32 * screen_cell.cell_size,
+			Transform::from_xyz(
+				screen_cell.x as f32 * screen_cell.cell_size as f32,
+				screen_cell.y as f32 * screen_cell.cell_size as f32,
 				0.0,
 			),
-			..default()
-		});
+			..default(),
+		));
 	}
 
 	fn get_color(&self) -> Color {
@@ -111,13 +114,13 @@ impl LayerFactory<TerrainDetail, (Layer<WaterType>, Layer<TerrainFeature>, Layer
 {
 	fn create_value(
 		&self,
-		pos: (usize, usize),
+		pos: &WorldPosition,
 		deps: &(Layer<WaterType>, Layer<TerrainFeature>, Layer<Biome>),
 	) -> TerrainDetail {
-		let water_type = deps.0.get(pos.0, pos.1);
-		let terrain_feature = deps.1.get(pos.0, pos.1);
-		let biome = deps.2.get(pos.0, pos.1);
-		let value = self.noise_gen.get_detail_value(pos.0, pos.1);
+		let water_type = deps.0.get(pos);
+		let terrain_feature = deps.1.get(pos);
+		let biome = deps.2.get(pos);
+		let value = self.noise_gen.get_detail_value(pos);
 		TerrainDetail::from_values(value, water_type, terrain_feature, biome)
 	}
 }
@@ -130,10 +133,10 @@ pub fn generate_detail_layer(
 	biome_layer: Layer<Biome>,
 ) -> Layer<TerrainDetail> {
 	let factory = DetailLayerFactory::new(noise_gen.clone());
-	super::generate_layer(
+	crate::layer::generate_layer(
 		scale,
 		(water_layer, terrain_layer, biome_layer),
 		factory,
-		super::GridPositionIterator::new(scale),
+		crate::layer::AllGridPositions::new(scale),
 	)
 }
