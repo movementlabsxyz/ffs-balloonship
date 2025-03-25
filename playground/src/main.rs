@@ -1,46 +1,74 @@
 use bevy::prelude::*;
-use bevy_glyph::{GlyphBrushPlugin, Section, TextBrush};
+pub mod layer;
 
-const GRID_SIZE: usize = 16;
-const CELL_SIZE: f32 = 40.0;
-const GLYPH: &str = "🔲"; // Try 🔸, ✴️, 🧿, 🧩, ⬡, 🪙, etc.
+#[derive(Component)]
+struct GridLine;
 
 fn main() {
-	App::new()
-		.add_plugins(DefaultPlugins.set(WindowPlugin {
-			primary_window: Some(Window {
-				title: "Procedural Grid".to_string(),
-				resolution: (GRID_SIZE as f32 * CELL_SIZE, GRID_SIZE as f32 * CELL_SIZE).into(),
-				..default()
-			}),
-			..default()
-		}))
-		.add_plugins(GlyphBrushPlugin)
-		.add_startup_system(setup)
-		.run();
+	App::new().add_plugins(DefaultPlugins).add_systems(Startup, setup).run();
 }
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>) {
-	commands.spawn(Camera2dBundle::default());
+	// Camera
+	commands.spawn((Camera2d, Transform::default()));
 
-	let font = asset_server.load("fonts/NotoEmoji-Regular.ttf"); // Good default for emoji
-	let offset = CELL_SIZE / 2.0;
+	// Background
+	commands.spawn((
+		Sprite {
+			color: Color::srgb(0.1, 0.1, 0.1),
+			custom_size: Some(Vec2::new(2000.0, 2000.0)),
+			..default()
+		},
+		Transform::default(),
+	));
 
-	for x in 0..GRID_SIZE {
-		for y in 0..GRID_SIZE {
-			let world_x = x as f32 * CELL_SIZE - (GRID_SIZE as f32 * CELL_SIZE / 2.0) + offset;
-			let world_y = y as f32 * CELL_SIZE - (GRID_SIZE as f32 * CELL_SIZE / 2.0) + offset;
+	// Initialize noise generator
+	let noise_gen = NoiseGenerator::new();
 
-			commands.spawn(TextBrush::section(
-				Section {
-					screen_position: Vec2::new(world_x, world_y),
-					text: vec![bevy_glyph::Text::new(GLYPH)
-						.with_color(Color::WHITE)
-						.with_scale(CELL_SIZE * 0.9)],
-					..default()
-				},
-				font.clone(),
-			));
-		}
+	// Render layers in order from bottom to top with proper scales
+	// Base layers (scale 60 = 16x16 grid)
+	render_layer_grid(generate_water_layer(&noise_gen, 60), &mut commands);
+	render_layer_grid(generate_terrain_layer(&noise_gen, 60), &mut commands);
+	render_layer_grid(generate_biome_layer(&noise_gen, 60), &mut commands);
+
+	// Detail layers (scale 58 = 64x64 grid)
+	render_layer_grid(generate_detail_layer(&noise_gen, 58), &mut commands);
+	render_layer_grid(generate_flora_layer(&noise_gen, 58), &mut commands);
+	render_layer_grid(generate_urban_layer(&noise_gen, 58), &mut commands);
+
+	// Special layer (scale 56 = 256x256 grid)
+	render_layer_grid(generate_special_layer(&noise_gen, 56), &mut commands);
+
+	// Draw grid lines
+	for i in 0..=GRID_SIZE {
+		// Vertical lines
+		commands.spawn((
+			Sprite {
+				color: Color::srgba(1.0, 1.0, 1.0, 0.1),
+				custom_size: Some(Vec2::new(2.0, GRID_SIZE as f32 * CELL_SIZE)),
+				..default()
+			},
+			Transform::from_xyz(
+				(i as f32 * CELL_SIZE) - (GRID_SIZE as f32 * CELL_SIZE / 2.0),
+				0.0,
+				0.0,
+			),
+			GridLine,
+		));
+
+		// Horizontal lines
+		commands.spawn((
+			Sprite {
+				color: Color::srgba(1.0, 1.0, 1.0, 0.1),
+				custom_size: Some(Vec2::new(GRID_SIZE as f32 * CELL_SIZE, 2.0)),
+				..default()
+			},
+			Transform::from_xyz(
+				0.0,
+				(i as f32 * CELL_SIZE) - (GRID_SIZE as f32 * CELL_SIZE / 2.0),
+				0.0,
+			),
+			GridLine,
+		));
 	}
 }
