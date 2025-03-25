@@ -17,7 +17,7 @@ pub enum TerrainDetail {
 }
 
 impl LayerValue for TerrainDetail {
-	fn render(&self, commands: &mut Commands, screen_cell: &WorldCell) {
+	fn render(&self, commands: &mut Commands, world_cell: &WorldCell) {
 		let color = self.get_color();
 
 		if *self == TerrainDetail::None {
@@ -28,17 +28,12 @@ impl LayerValue for TerrainDetail {
 			Sprite {
 				color,
 				custom_size: Some(Vec2::new(
-					screen_cell.cell_size as f32,
-					screen_cell.cell_size as f32,
+					world_cell.cell_size as f32,
+					world_cell.cell_size as f32,
 				)),
 				..default()
 			},
-			Transform::from_xyz(
-				screen_cell.x as f32 * screen_cell.cell_size as f32,
-				screen_cell.y as f32 * screen_cell.cell_size as f32,
-				0.0,
-			),
-			..default(),
+			Transform::from_xyz(world_cell.position.x as f32, world_cell.position.x as f32, 0.0),
 		));
 	}
 
@@ -56,11 +51,14 @@ impl LayerValue for TerrainDetail {
 
 impl TerrainDetail {
 	pub fn from_values(
-		detail_value: f64,
+		detail_value: u32,
 		water_type: WaterType,
 		terrain_feature: TerrainFeature,
 		biome: Biome,
 	) -> Self {
+		// normalize detail_value to 0-1
+		let detail_value = detail_value as f64 / u32::MAX as f64;
+
 		if water_type.is_water() {
 			if detail_value > 0.7 {
 				Self::Ice
@@ -114,20 +112,20 @@ impl LayerFactory<TerrainDetail, (Layer<WaterType>, Layer<TerrainFeature>, Layer
 {
 	fn create_value(
 		&self,
-		pos: &WorldPosition,
+		pos: WorldPosition,
 		deps: &(Layer<WaterType>, Layer<TerrainFeature>, Layer<Biome>),
 	) -> TerrainDetail {
 		let water_type = deps.0.get(pos);
 		let terrain_feature = deps.1.get(pos);
 		let biome = deps.2.get(pos);
-		let value = self.noise_gen.get_detail_value(pos);
+		let value = self.noise_gen.get_noise_value(&pos, 0);
 		TerrainDetail::from_values(value, water_type, terrain_feature, biome)
 	}
 }
 
 pub fn generate_detail_layer(
 	noise_gen: &NoiseGenerator,
-	scale: u64,
+	scale: u32,
 	water_layer: Layer<WaterType>,
 	terrain_layer: Layer<TerrainFeature>,
 	biome_layer: Layer<Biome>,

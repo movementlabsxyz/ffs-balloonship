@@ -1,6 +1,6 @@
-use super::water::WaterType;
-use super::{Layer, LayerFactory, LayerValue, ScreenCell, CELL_SIZE, GRID_SIZE};
-use crate::terrain::base::NoiseGenerator;
+use crate::layer::base::NoiseGenerator;
+use crate::layer::layers::water::WaterType;
+use crate::layer::{Layer, LayerFactory, LayerValue, WorldCell, WorldPosition};
 use bevy::prelude::*;
 
 #[derive(Clone, Copy, Default, PartialEq)]
@@ -14,24 +14,23 @@ pub enum TerrainFeature {
 }
 
 impl LayerValue for TerrainFeature {
-	fn render(&self, commands: &mut Commands, screen_cell: &ScreenCell) {
+	fn render(&self, commands: &mut Commands, world_cell: &WorldCell) {
 		let color = self.get_color();
 
 		commands.spawn((
 			Sprite {
 				color,
 				custom_size: Some(Vec2::new(
-					screen_cell.cell_size as f32,
-					screen_cell.cell_size as f32,
+					world_cell.cell_size as f32,
+					world_cell.cell_size as f32,
 				)),
 				..default()
 			},
 			Transform::from_xyz(
-				screen_cell.x as f32 * screen_cell.cell_size as f32,
-				screen_cell.y as f32 * screen_cell.cell_size as f32,
+				world_cell.position.x as f32 * world_cell.cell_size as f32,
+				world_cell.position.y as f32 * world_cell.cell_size as f32,
 				0.0,
 			),
-			..default(),
 		));
 	}
 
@@ -77,18 +76,23 @@ impl TerrainLayerFactory {
 }
 
 impl LayerFactory<TerrainFeature, Layer<WaterType>> for TerrainLayerFactory {
-	fn create_value(&self, pos: (usize, usize), water_layer: &Layer<WaterType>) -> TerrainFeature {
-		let water_type = water_layer.get(pos.0, pos.1);
-		let value = self.noise_gen.get_terrain_value(pos.0, pos.1);
-		TerrainFeature::from_values(value, water_type)
+	fn create_value(&self, pos: WorldPosition, water_layer: &Layer<WaterType>) -> TerrainFeature {
+		let water_type = water_layer.get(pos);
+		let value = self.noise_gen.get_noise_value(&pos, 1);
+		TerrainFeature::from_values(value as f64 / u32::MAX as f64, water_type)
 	}
 }
 
 pub fn generate_terrain_layer(
 	noise_gen: &NoiseGenerator,
-	scale: u64,
+	scale: u32,
 	water_layer: Layer<WaterType>,
 ) -> Layer<TerrainFeature> {
 	let factory = TerrainLayerFactory::new(noise_gen.clone());
-	super::generate_layer(scale, water_layer, factory, super::GridPositionIterator::new(scale))
+	crate::layer::generate_layer(
+		scale,
+		water_layer,
+		factory,
+		crate::layer::AllGridPositions::new(scale),
+	)
 }

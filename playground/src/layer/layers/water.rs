@@ -1,5 +1,5 @@
-use crate::layer::{Layer, LayerFactory, LayerValue, WorldPosition};
-use crate::terrain::base::NoiseGenerator;
+use crate::layer::base::NoiseGenerator;
+use crate::layer::{Layer, LayerFactory, LayerValue, WorldCell, WorldPosition};
 use bevy::prelude::*;
 
 #[derive(Clone, Copy, Default, PartialEq)]
@@ -13,7 +13,7 @@ pub enum WaterType {
 }
 
 impl LayerValue for WaterType {
-	fn render(&self, commands: &mut Commands, screen_cell: &ScreenCell) {
+	fn render(&self, commands: &mut Commands, world_cell: &WorldCell) {
 		let color = self.get_color();
 
 		if *self == WaterType::None {
@@ -24,17 +24,16 @@ impl LayerValue for WaterType {
 			Sprite {
 				color,
 				custom_size: Some(Vec2::new(
-					screen_cell.cell_size as f32,
-					screen_cell.cell_size as f32,
+					world_cell.cell_size as f32,
+					world_cell.cell_size as f32,
 				)),
 				..default()
 			},
 			Transform::from_xyz(
-				screen_cell.x as f32 * screen_cell.cell_size as f32,
-				screen_cell.y as f32 * screen_cell.cell_size as f32,
+				world_cell.position.x as f32 * world_cell.cell_size as f32,
+				world_cell.position.y as f32 * world_cell.cell_size as f32,
 				0.0,
 			),
-			..default(),
 		));
 	}
 
@@ -67,37 +66,6 @@ impl WaterType {
 	pub fn is_water(&self) -> bool {
 		*self != Self::None
 	}
-
-	pub fn setup(
-		&self,
-		commands: &mut Commands,
-		asset_server: &Res<AssetServer>,
-		x: usize,
-		y: usize,
-	) {
-		if self == &Self::None {
-			return;
-		}
-
-		// Calculate position for this grid cell
-		let cell_size_f32 = CELL_SIZE as f32;
-		let offset = cell_size_f32 / 2.0;
-		let pos_x =
-			(x as f32 * cell_size_f32) - ((GRID_SIZE as f32 * cell_size_f32) / 2.0) + offset;
-		let pos_y =
-			(y as f32 * cell_size_f32) - ((GRID_SIZE as f32 * cell_size_f32) / 2.0) + offset;
-
-		// Spawn water sprite at grid cell scale
-		commands.spawn((
-			Sprite {
-				color: self.get_color(),
-				custom_size: Some(Vec2::new(cell_size_f32 - 2.0, cell_size_f32 - 2.0)),
-				..default()
-			},
-			Transform::from_xyz(pos_x, pos_y, 0.0),
-			..default(),
-		));
-	}
 }
 
 pub struct WaterLayerFactory {
@@ -111,13 +79,13 @@ impl WaterLayerFactory {
 }
 
 impl LayerFactory<WaterType, ()> for WaterLayerFactory {
-	fn create_value(&self, pos: (usize, usize), _deps: &()) -> WaterType {
-		let value = self.noise_gen.get_water_value(pos.0, pos.1);
-		WaterType::from_value(value)
+	fn create_value(&self, pos: WorldPosition, _deps: &()) -> WaterType {
+		let value = self.noise_gen.get_noise_value(&pos, 0);
+		WaterType::from_value(value as f64 / u32::MAX as f64)
 	}
 }
 
-pub fn generate_water_layer(noise_gen: &NoiseGenerator, scale: u64) -> Layer<WaterType> {
+pub fn generate_water_layer(noise_gen: &NoiseGenerator, scale: u32) -> Layer<WaterType> {
 	let factory = WaterLayerFactory::new(noise_gen.clone());
-	super::generate_layer(scale, (), factory, super::GridPositionIterator::new(scale))
+	crate::layer::generate_layer(scale, (), factory, crate::layer::AllGridPositions::new(scale))
 }

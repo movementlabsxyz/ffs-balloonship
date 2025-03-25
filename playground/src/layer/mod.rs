@@ -19,7 +19,7 @@ pub struct WorldCell {
 
 /// A value that can be rendered to a cell.
 pub trait LayerValue: Clone + Copy + Default + PartialEq {
-	fn render(&self, commands: &mut Commands, screen_cell: &WorldCell);
+	fn render(&self, commands: &mut Commands, world_cell: &WorldCell);
 	fn get_color(&self) -> Color;
 }
 
@@ -29,7 +29,7 @@ pub trait LayerFactory<T: LayerValue, D> {
 }
 
 /// A position relative to the grid, i.e., subdivisions of the world.
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub struct GridPosition {
 	pub x: u32,
 	pub y: u32,
@@ -115,11 +115,12 @@ impl<T: LayerValue> Layer<T> {
 	pub fn scale(&self) -> u32 {
 		self.scale
 	}
-
 	/// Render the layer to the given [Commands].
 	pub fn render(&self, commands: &mut Commands) {
-		for (&(x, y), value) in &self.data {
-			value.render(commands, &WorldCell { x, y, cell_size: self.scale });
+		for (position, value) in &self.data {
+			let position = *position;
+			let world_position = position.into();
+			value.render(commands, &WorldCell { position: world_position, cell_size: self.scale });
 		}
 	}
 }

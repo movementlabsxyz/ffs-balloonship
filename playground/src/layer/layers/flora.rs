@@ -1,12 +1,12 @@
-use super::biome::Biome;
-use super::detail::TerrainDetail;
-use super::terrain::TerrainFeature;
-use super::water::WaterType;
-use super::{Layer, LayerFactory, LayerValue, ScreenCell};
-use crate::terrain::base::NoiseGenerator;
+use crate::layer::base::NoiseGenerator;
+use crate::layer::layers::biome::Biome;
+use crate::layer::layers::detail::TerrainDetail;
+use crate::layer::layers::terrain::TerrainFeature;
+use crate::layer::layers::water::WaterType;
+use crate::layer::{Layer, LayerFactory, LayerValue, WorldCell, WorldPosition};
 use bevy::prelude::*;
 
-#[derive(Clone, Copy, Default)]
+#[derive(Clone, Copy, Default, PartialEq)]
 pub enum Flora {
 	#[default]
 	None,
@@ -20,7 +20,7 @@ pub enum Flora {
 }
 
 impl LayerValue for Flora {
-	fn render(&self, commands: &mut Commands, screen_cell: &ScreenCell) {
+	fn render(&self, commands: &mut Commands, world_cell: &WorldCell) {
 		let color = match self {
 			Flora::None => return,
 			Flora::Tree => Color::rgb(0.2, 0.5, 0.1),
@@ -36,66 +36,31 @@ impl LayerValue for Flora {
 			Sprite {
 				color,
 				custom_size: Some(Vec2::new(
-					screen_cell.cell_size as f32,
-					screen_cell.cell_size as f32,
+					world_cell.cell_size as f32,
+					world_cell.cell_size as f32,
 				)),
 				..default()
 			},
 			Transform::from_xyz(
-				screen_cell.x as f32 * screen_cell.cell_size as f32,
-				screen_cell.y as f32 * screen_cell.cell_size as f32,
+				world_cell.position.x as f32 * world_cell.cell_size as f32,
+				world_cell.position.y as f32 * world_cell.cell_size as f32,
 				0.0,
 			),
-			..default(),
 		));
 	}
-}
 
-pub struct FloraLayerFactory {
-	noise_gen: NoiseGenerator,
-}
-
-impl FloraLayerFactory {
-	pub fn new(noise_gen: NoiseGenerator) -> Self {
-		Self { noise_gen }
+	fn get_color(&self) -> Color {
+		match self {
+			Self::None => Color::NONE,
+			Self::Tree => Color::srgb(0.2, 0.5, 0.2),
+			Self::Palm => Color::srgb(0.3, 0.6, 0.3),
+			Self::Cactus => Color::srgb(0.3, 0.7, 0.3),
+			Self::Bush => Color::srgb(0.3, 0.6, 0.3),
+			Self::Flower => Color::srgb(0.8, 0.4, 0.8),
+			Self::Mushroom => Color::srgb(0.7, 0.7, 0.7),
+			Self::Seaweed => Color::srgb(0.2, 0.4, 0.2),
+		}
 	}
-}
-
-impl
-	LayerFactory<
-		Flora,
-		(Layer<WaterType>, Layer<TerrainFeature>, Layer<Biome>, Layer<TerrainDetail>),
-	> for FloraLayerFactory
-{
-	fn create_value(
-		&self,
-		pos: (usize, usize),
-		deps: &(Layer<WaterType>, Layer<TerrainFeature>, Layer<Biome>, Layer<TerrainDetail>),
-	) -> Flora {
-		let water_type = deps.0.get(pos.0, pos.1);
-		let terrain_feature = deps.1.get(pos.0, pos.1);
-		let biome = deps.2.get(pos.0, pos.1);
-		let detail = deps.3.get(pos.0, pos.1);
-		let value = self.noise_gen.get_flora_value(pos.0, pos.1);
-		Flora::from_values(value, water_type, terrain_feature, biome, detail)
-	}
-}
-
-pub fn generate_flora_layer(
-	noise_gen: &NoiseGenerator,
-	scale: u64,
-	water_layer: Layer<WaterType>,
-	terrain_layer: Layer<TerrainFeature>,
-	biome_layer: Layer<Biome>,
-	detail_layer: Layer<TerrainDetail>,
-) -> Layer<Flora> {
-	let factory = FloraLayerFactory::new(noise_gen.clone());
-	super::generate_layer(
-		scale,
-		(water_layer, terrain_layer, biome_layer, detail_layer),
-		factory,
-		super::GridPositionIterator::new(scale),
-	)
 }
 
 impl Flora {
@@ -172,43 +137,57 @@ impl Flora {
 			}
 		}
 	}
+}
 
-	pub fn get_color(&self) -> Color {
-		match self {
-			Self::None => Color::NONE,
-			Self::Tree => Color::srgb(0.2, 0.5, 0.2),
-			Self::Palm => Color::srgb(0.3, 0.6, 0.3),
-			Self::Cactus => Color::srgb(0.3, 0.7, 0.3),
-			Self::Bush => Color::srgb(0.3, 0.6, 0.3),
-			Self::Flower => Color::srgb(0.8, 0.4, 0.8),
-			Self::Mushroom => Color::srgb(0.7, 0.7, 0.7),
-			Self::Seaweed => Color::srgb(0.2, 0.4, 0.2),
-		}
+pub struct FloraLayerFactory {
+	noise_gen: NoiseGenerator,
+}
+
+impl FloraLayerFactory {
+	pub fn new(noise_gen: NoiseGenerator) -> Self {
+		Self { noise_gen }
 	}
+}
 
-	pub fn setup(
+impl
+	LayerFactory<
+		Flora,
+		(Layer<WaterType>, Layer<TerrainFeature>, Layer<Biome>, Layer<TerrainDetail>),
+	> for FloraLayerFactory
+{
+	fn create_value(
 		&self,
-		commands: &mut Commands,
-		asset_server: &Res<AssetServer>,
-		x: usize,
-		y: usize,
-	) {
-		if self == &Self::None {
-			return;
-		}
-
-		// Calculate position for this grid cell (at 64x64 scale)
-		let offset = CELL_SIZE / 2.0;
-		let pos_x = (x as f32 * CELL_SIZE / 4.0) - (GRID_SIZE as f32 * CELL_SIZE / 2.0) + offset;
-		let pos_y = (y as f32 * CELL_SIZE / 4.0) - (GRID_SIZE as f32 * CELL_SIZE / 2.0) + offset;
-
-		// Spawn flora sprite at quarter grid cell scale
-		commands
-			.spawn(Sprite {
-				color: self.get_color(),
-				custom_size: Some(Vec2::new(CELL_SIZE - 2.0, CELL_SIZE - 2.0)),
-				..default()
-			})
-			.insert(Transform::from_xyz(pos_x, pos_y, 0.0));
+		pos: WorldPosition,
+		deps: &(Layer<WaterType>, Layer<TerrainFeature>, Layer<Biome>, Layer<TerrainDetail>),
+	) -> Flora {
+		let water_type = deps.0.get(pos);
+		let terrain_feature = deps.1.get(pos);
+		let biome = deps.2.get(pos);
+		let detail = deps.3.get(pos);
+		let value = self.noise_gen.get_noise_value(&pos, 4);
+		Flora::from_values(
+			value as f64 / u32::MAX as f64,
+			water_type,
+			terrain_feature,
+			biome,
+			detail,
+		)
 	}
+}
+
+pub fn generate_flora_layer(
+	noise_gen: &NoiseGenerator,
+	scale: u32,
+	water_layer: Layer<WaterType>,
+	terrain_layer: Layer<TerrainFeature>,
+	biome_layer: Layer<Biome>,
+	detail_layer: Layer<TerrainDetail>,
+) -> Layer<Flora> {
+	let factory = FloraLayerFactory::new(noise_gen.clone());
+	crate::layer::generate_layer(
+		scale,
+		(water_layer, terrain_layer, biome_layer, detail_layer),
+		factory,
+		crate::layer::AllGridPositions::new(scale),
+	)
 }
