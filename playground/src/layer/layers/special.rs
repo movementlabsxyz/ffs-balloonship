@@ -25,13 +25,13 @@ impl LayerValue for Special {
 	fn render(&self, commands: &mut Commands, world_cell: &WorldCell) {
 		let color = match self {
 			Special::None => return,
-			Special::Volcano => Color::rgb(0.8, 0.2, 0.0),
-			Special::Geyser => Color::rgb(0.0, 0.8, 0.8),
-			Special::Crystal => Color::rgb(0.8, 0.8, 1.0),
-			Special::Portal => Color::rgb(0.8, 0.0, 0.8),
-			Special::Ruins => Color::rgb(0.6, 0.6, 0.6),
-			Special::Temple => Color::rgb(0.8, 0.8, 0.6),
-			Special::Dungeon => Color::rgb(0.4, 0.4, 0.4),
+			Special::Volcano => Color::srgb(0.8, 0.2, 0.0),
+			Special::Geyser => Color::srgb(0.0, 0.8, 0.8),
+			Special::Crystal => Color::srgb(0.8, 0.8, 1.0),
+			Special::Portal => Color::srgb(0.8, 0.0, 0.8),
+			Special::Ruins => Color::srgb(0.6, 0.6, 0.6),
+			Special::Temple => Color::srgb(0.8, 0.8, 0.6),
+			Special::Dungeon => Color::srgb(0.4, 0.4, 0.4),
 		};
 
 		commands.spawn((

@@ -24,13 +24,13 @@ impl LayerValue for Urban {
 	fn render(&self, commands: &mut Commands, world_cell: &WorldCell) {
 		let color = match self {
 			Urban::None => return,
-			Urban::House => Color::rgb(0.7, 0.7, 0.7),
-			Urban::Farm => Color::rgb(0.8, 0.8, 0.6),
-			Urban::City => Color::rgb(0.5, 0.5, 0.5),
-			Urban::Port => Color::rgb(0.6, 0.6, 0.8),
-			Urban::Mine => Color::rgb(0.4, 0.4, 0.4),
-			Urban::Temple => Color::rgb(0.8, 0.8, 0.4),
-			Urban::Ruin => Color::rgb(0.6, 0.6, 0.6),
+			Urban::House => Color::srgb(0.7, 0.7, 0.7),
+			Urban::Farm => Color::srgb(0.8, 0.8, 0.6),
+			Urban::City => Color::srgb(0.5, 0.5, 0.5),
+			Urban::Port => Color::srgb(0.6, 0.6, 0.8),
+			Urban::Mine => Color::srgb(0.4, 0.4, 0.4),
+			Urban::Temple => Color::srgb(0.8, 0.8, 0.4),
+			Urban::Ruin => Color::srgb(0.6, 0.6, 0.6),
 		};
 
 		commands.spawn((

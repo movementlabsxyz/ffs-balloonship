@@ -23,13 +23,13 @@ impl LayerValue for Flora {
 	fn render(&self, commands: &mut Commands, world_cell: &WorldCell) {
 		let color = match self {
 			Flora::None => return,
-			Flora::Tree => Color::rgb(0.2, 0.5, 0.1),
-			Flora::Palm => Color::rgb(0.3, 0.6, 0.2),
-			Flora::Cactus => Color::rgb(0.2, 0.4, 0.1),
-			Flora::Bush => Color::rgb(0.3, 0.5, 0.2),
-			Flora::Flower => Color::rgb(0.8, 0.2, 0.2),
-			Flora::Mushroom => Color::rgb(0.7, 0.7, 0.7),
-			Flora::Seaweed => Color::rgb(0.1, 0.4, 0.2),
+			Flora::Tree => Color::srgb(0.2, 0.5, 0.1),
+			Flora::Palm => Color::srgb(0.3, 0.6, 0.2),
+			Flora::Cactus => Color::srgb(0.2, 0.4, 0.1),
+			Flora::Bush => Color::srgb(0.3, 0.5, 0.2),
+			Flora::Flower => Color::srgb(0.8, 0.2, 0.2),
+			Flora::Mushroom => Color::srgb(0.7, 0.7, 0.7),
+			Flora::Seaweed => Color::srgb(0.1, 0.4, 0.2),
 		};
 
 		commands.spawn((
